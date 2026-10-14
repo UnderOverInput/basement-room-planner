@@ -16,17 +16,18 @@ export const FLOORS={
 };
 export const SWATCHES=[['Original',null],['Warm white','#f2ede3'],['Greige','#cfc6b8'],['Sage','#a9b8a0'],['Sky','#a9c2d6'],['Navy','#2f3f5c'],['Terracotta','#c27a5a'],['Charcoal','#4a4c50']];
 const cache={};function floorTex(id){if(cache[id])return cache[id];const [c,g]=cnv();FLOORS[id].draw(g,512);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return cache[id]=t;}
-export const U={uFloorOn:{value:0},uFloorMap:{value:null},uFloorScale:{value:1},uWallOn:{value:0},uWallColor:{value:new THREE.Color()},uHide:{value:1},uMask:{value:null}};
+export const U={uFloorOn:{value:0},uFloorMap:{value:null},uFloorScale:{value:1},uWallOn:{value:0},uWallColor:{value:new THREE.Color()},uHide:{value:1},uDim:{value:1},uMask:{value:null}};
 export const MASK={x0:-4.3,z0:-3.1,w:8.8,d:6.4,margin:0.35};
 // Patch the scan material: faces facing up near y=0 = floor; near-vertical faces above the floor = walls.
 export function patchRoom(mat){mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vWN;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz;vWN=normalize(mat3(modelMatrix)*objectNormal);');
- sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vWN;uniform float uFloorOn,uFloorScale,uWallOn;uniform sampler2D uFloorMap;uniform vec3 uWallColor;uniform float uHide;uniform sampler2D uMask;')
+ sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vWN;uniform float uFloorOn,uFloorScale,uWallOn;uniform sampler2D uFloorMap;uniform vec3 uWallColor;uniform float uHide;uniform float uDim;uniform sampler2D uMask;')
  .replace('#include <map_fragment>',`#include <map_fragment>
  if(uHide>0.5 && (vWP.y>0.03 || (max(max(diffuseColor.r,diffuseColor.g),diffuseColor.b)-min(min(diffuseColor.r,diffuseColor.g),diffuseColor.b))>0.12) && vWP.x>-3.95 && vWP.x<3.95 && vWP.z>-2.75 && vWP.z<2.75 && texture2D(uMask,vec2((vWP.x+4.3)/8.8,(vWP.z+3.1)/6.4)).r>0.5) discard;
  {vec3 n=normalize(vWN);float lum=dot(diffuseColor.rgb,vec3(.299,.587,.114));
   if(uFloorOn>0.5 && vWP.y<0.25 && abs(n.y)>0.75){vec3 t=texture2D(uFloorMap,vWP.xz/uFloorScale).rgb;diffuseColor.rgb=t*clamp(lum/0.42,0.55,1.25);}
-  else if(uWallOn>0.5 && abs(n.y)<0.45 && vWP.y>0.08){diffuseColor.rgb=uWallColor*clamp(lum/0.55,0.35,1.2);}}`);};
+  else if(uWallOn>0.5 && abs(n.y)<0.45 && vWP.y>0.08){diffuseColor.rgb=uWallColor*clamp(lum/0.55,0.35,1.2);}}
+ diffuseColor.rgb*=uDim;`);};
  mat.customProgramCacheKey=()=>'roompaint';mat.needsUpdate=true;}
 export function applyPaint(p){p=p||{};const f=p.f&&FLOORS[p.f]&&p.f!=='scan'?p.f:null;U.uFloorOn.value=f?1:0;if(f){U.uFloorMap.value=floorTex(f);U.uFloorScale.value=FLOORS[f].size;}
  U.uWallOn.value=p.w?1:0;if(p.w)U.uWallColor.value.set(p.w).convertSRGBToLinear();}

@@ -38,18 +38,25 @@ label{display:flex;gap:4px;align-items:center;font-size:12px}
 <div class="grp"><button data-v="top">Top</button><button data-v="front">Front</button><button data-v="side">Side</button><button data-v="iso">3/4</button><button id="fit" title="F">Fit room</button></div>
 <button id="lock">Lock to plan</button>
 <div class="grp"><label><input type="checkbox" id="snapG" checked>Grid 6″</label><label><input type="checkbox" id="snapA" checked>15°</label></div>
-<select id="layouts"><option value="">Layouts…</option></select><button id="save">Save</button><button id="share">Share layout</button><button id="clear">Clear</button><button id="paintBtn">Paint & floor</button><button id="planBtn">Floor plan</button>
+<select id="layouts"><option value="">Layouts…</option></select><button id="save">Save</button><button id="share">Share layout</button><button id="clear">Clear</button><button id="paintBtn">Paint & floor</button><button id="planBtn">Floor plan</button><button id="movieBtn" title="M">Movie</button>
 <a href="https://poly.cam/capture/0503709E-BDD0-4D62-BD74-C1BD9F886780" target="_blank" rel="noopener">Original scan on Polycam</a></div>
 <div id="compass" title="Compass: N is the far wall in Top view"><svg viewBox="-50 -50 100 100"><circle r="44" fill="none" stroke="#444a58" stroke-width="2"/><path d="M0-38L9 0H-9Z" fill="#e05050"/><path d="M0 38L9 0H-9Z" fill="#9aa0b0"/><text y="-22" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" transform="translate(0,-4)">N</text></svg></div>
 <div id="sel"><b id="selName"></b><small id="selDim" style="color:#8a90a0"></small><label>↻<input type="range" id="rotS" min="0" max="359" step="15" style="width:110px"><span id="rotV"></span></label><input type="color" id="col"><button id="dup">Duplicate</button><button id="del">Delete</button><button id="desel">Done</button></div>
 <div id="paint" class="card"><div class="ch"><b>Paint & flooring</b><button class="x" data-close="paint">✕</button></div>
 <div class="lbl">Walls</div><div id="sw"></div><label style="margin-top:6px">Custom <input type="color" id="wallPick" value="#cfc6b8"></label>
 <div class="lbl">Floor</div><div id="fl"></div><label style="margin-top:10px;min-height:44px"><input type="checkbox" id="hideC" checked style="width:22px;height:22px"> Hide clutter (inflatable &amp; floor items)</label><button id="paintReset" style="margin-top:10px;width:100%">Reset to original scan</button></div>
+<div id="movie" class="card"><div class="ch"><b>Movie mode</b><button class="x" data-close="movie">✕</button></div>
+<label style="min-height:44px"><input type="checkbox" id="mvOn" style="width:22px;height:22px"> Projector on</label>
+<div class="lbl">Room lights <span id="mvLv"></span></div><input type="range" id="mvLight" min="0" max="100" value="100" style="width:100%">
+<div class="lbl">Screen <span id="mvSz"></span></div><input type="range" id="mvSize" min="90" max="150" value="120" style="width:100%">
+<div style="display:flex;gap:6px;margin-top:6px"><button class="mvAr on" data-ar="16:9">16:9</button><button class="mvAr" data-ar="2.35">2.35:1</button></div>
+<div class="lbl">Bottom edge height <span id="mvH"></span></div><input type="range" id="mvY" min="0.15" max="1.5" step="0.0254" value="0.6" style="width:100%">
+<small id="mvDim" style="color:#8a90a0;display:block;margin-top:6px"></small></div>
 <div id="joy"><i></i></div><div id="toast"></div><div id="hint"></div></div>
 <div id="side"><div id="handle"><i id="grip"></i><button class="hb" id="ptog" title="Minimize/expand panel (P)" aria-label="Toggle panel">›</button><span id="ptitle">Furniture</span><button class="hb" id="pclose" title="Hide panel" aria-label="Hide panel">✕</button></div><small id="roomdim"></small><div id="list"></div></div><div id="planM"><div class="pc"><div class="ch"><b>Floor plan</b><button class="x" data-close="planM">✕</button></div><img id="planImg" alt="Floor plan"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button id="dlPng">Download PNG</button><button id="dlPdf">Download PDF</button><button id="prPlan">Print</button></div></div></div><button id="pill" aria-label="Show furniture panel">☰ Furniture</button>
 <script type="module">
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {catalog,setColor} from './furniture.js';import {FLOORS,SWATCHES,patchRoom,applyPaint,U as PU,MASK,loadMask} from './paint.js';import {renderPlan} from './plan.js';
+import {catalog,setColor} from './furniture.js';import {FLOORS,SWATCHES,patchRoom,applyPaint,U as PU,MASK,loadMask} from './paint.js';import {renderPlan} from './plan.js';import {setupMovie,screenSize} from './movie.js';
 const B={x0:-4.26,x1:4.26,z0:-3.07,z1:3.07,ceil:3.9};const EYE=1.676,ROOM_ROT=-1.58*Math.PI/180,GRID=0.1524;
 let paint={w:null,f:'scan',h:true};let wallPts=[];
 const touch=matchMedia('(pointer:coarse)').matches;
@@ -60,7 +67,7 @@ const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:
 const clip=new THREE.Plane(new THREE.Vector3(0,-1,0),3.3);
 const S=new THREE.Scene();S.background=new THREE.Color(0x0e0f12);
 const cam=new THREE.PerspectiveCamera(48,1,0.05,200);
-S.add(new THREE.HemisphereLight(0xffffff,0x444444,1.6));const dl=new THREE.DirectionalLight(0xffffff,1.2);dl.position.set(3,6,2);dl.castShadow=true;S.add(dl);
+const hemi=new THREE.HemisphereLight(0xffffff,0x444444,1.6);S.add(hemi);const dl=new THREE.DirectionalLight(0xffffff,1.2);dl.position.set(3,6,2);dl.castShadow=true;S.add(dl);
 const oc=new OrbitControls(cam,cv);oc.enableDamping=true;oc.dampingFactor=0.1;oc.zoomToCursor=true;oc.screenSpacePanning=false;oc.minDistance=1.2;oc.maxDistance=40;oc.maxPolarAngle=Math.PI/2-0.03;oc.zoomSpeed=0.9;
 oc.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
 oc.addEventListener('change',()=>{const t=oc.target;t.x=THREE.MathUtils.clamp(t.x,B.x0-2,B.x1+2);t.z=THREE.MathUtils.clamp(t.z,B.z0-2,B.z1+2);t.y=THREE.MathUtils.clamp(t.y,0,2);if(cam.position.y<0.15)cam.position.y=0.15;});
@@ -153,12 +160,12 @@ function tick(){const dt=Math.min(clock.getDelta(),0.1);let az;
   if(f||s){walkTo=null;cam.position.addScaledVector(fw,f*sp).addScaledVector(rt,s*sp);}else if(walkTo){const d=new THREE.Vector3(walkTo.x-cam.position.x,0,walkTo.z-cam.position.z);if(d.length()<0.1)walkTo=null;else cam.position.addScaledVector(d.normalize(),Math.min(sp,d.length()));}
   const m=0.3;cam.position.x=THREE.MathUtils.clamp(cam.position.x,B.x0+m,B.x1-m);cam.position.z=THREE.MathUtils.clamp(cam.position.z,B.z0+m,B.z1-m);cam.position.y=EYE;cam.rotation.set(pitch,yaw,0,'YXZ');az=yaw;}
  else{if(anim){let t=Math.min(1,(performance.now()-anim.t0)/anim.dur),k=ease(t);cam.position.lerpVectors(anim.p0,anim.p1,k);oc.target.lerpVectors(anim.t0v,anim.t1,k);if(t>=1)anim=null;}oc.update();az=oc.getAzimuthalAngle();}
- csvg.style.transform=`rotate(${THREE.MathUtils.radToDeg(az)}deg)`;R.render(S,cam);requestAnimationFrame(tick);}
+ csvg.style.transform=`rotate(${THREE.MathUtils.radToDeg(az)}deg)`;if(window.__mv)__mv.tick(performance.now()/1000,items.find(o=>o.userData.itemId==='projector'));R.render(S,cam);requestAnimationFrame(tick);}
 resize();goView('iso',false);hint();tick();
 // layouts
 const serItems=()=>items.map(o=>({i:o.userData.itemId,x:+o.position.x.toFixed(2),z:+o.position.z.toFixed(2),r:o.userData.rot,...(o.userData.color?{c:o.userData.color}:{})}));
-const ser=()=>({items:serItems(),...(paint.w?{w:paint.w}:{}),...(paint.f&&paint.f!=='scan'?{f:paint.f}:{}),...(paint.h===false?{h:0}:{})});
-function load(data){const arr=Array.isArray(data)?data:(data?.items||[]);items.slice().forEach(o=>S.remove(o));items.length=0;select(null);arr.forEach(s=>addItem(s.i,s));setPaint(Array.isArray(data)?{}:{w:data?.w||null,f:data?.f||'scan',h:data?.h!==0});}
+const ser=()=>({items:serItems(),...(paint.w?{w:paint.w}:{}),...(paint.f&&paint.f!=='scan'?{f:paint.f}:{}),...(paint.h===false?{h:0}:{}),...(mv.st.on||mv.st.size!==120||mv.st.ar!=='16:9'||mv.st.light!==1?{mv:{...mv.st}}:{})});
+function load(data){const arr=Array.isArray(data)?data:(data?.items||[]);items.slice().forEach(o=>S.remove(o));items.length=0;select(null);arr.forEach(s=>addItem(s.i,s));setPaint(Array.isArray(data)?{}:{w:data?.w||null,f:data?.f||'scan',h:data?.h!==0});setMovie(Array.isArray(data)?{on:false}:(data?.mv||{on:false}),false);}
 const LS='basementLayouts';const getL=()=>JSON.parse(localStorage.getItem(LS)||'{}');
 function refreshL(){const s=document.getElementById('layouts');s.innerHTML='<option value="">Layouts…</option>'+Object.keys(getL()).map(k=>`<option>${k.replace(/</g,'&lt;')}</option>`).join('');}refreshL();
 document.getElementById('save').onclick=()=>{const n=prompt('Layout name','Layout '+(Object.keys(getL()).length+1));if(!n)return;const l=getL();l[n]=ser();localStorage.setItem(LS,JSON.stringify(l));refreshL();toast('Saved “'+n+'”');};
@@ -168,7 +175,7 @@ function toast(t){const T=document.getElementById('toast');T.textContent=t;T.sty
 const enc=a=>btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/')))));
 document.getElementById('share').onclick=async()=>{location.hash='l='+enc(ser());const u=location.href;try{if(navigator.share&&touch)await navigator.share({title:'Room layout',url:u});else{await navigator.clipboard.writeText(u);toast('Link copied');}}catch{toast('Link is in the address bar');}};
-function fromHash(){const m=location.hash.match(/l=([\w-]+)/);if(m)try{load(dec(m[1]));}catch(e){console.warn('bad layout link');}}fromHash();addEventListener('hashchange',fromHash);
+function fromHash(){const m=location.hash.match(/l=([\w-]+)/);if(m)try{load(dec(m[1]));}catch(e){console.warn('bad layout link');}}addEventListener('hashchange',fromHash);
 const mob=()=>innerWidth<=760&&!(innerHeight<=500&&innerWidth>innerHeight);
 let panel=localStorage.getItem('panelState')||'expanded';
 function setPanel(st,save=true){panel=st;document.body.dataset.panel=st;if(save)localStorage.setItem('panelState',st);const t=document.getElementById('ptog');t.textContent=mob()?(st==='expanded'?'⌄':'⌃'):(st==='expanded'?'›':'‹');updTitle();}
@@ -194,7 +201,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getE
 document.getElementById('paintBtn').onclick=()=>document.getElementById('paint').classList.toggle('open');
 // ---- floor plan export
 let planCanvas=null;
-function makePlan(){const wp=[];for(let i=0;i<wallPts.length;i+=3)if(!(paint.h!==false&&wallPts[i+2]))wp.push(wallPts[i],wallPts[i+1]);planCanvas=renderPlan({B,wallPts:wp,items:serItems(),cat,paint});document.getElementById('planImg').src=planCanvas.toDataURL('image/png');document.getElementById('planM').classList.add('open');return planCanvas;}
+function makePlan(){const wp=[];for(let i=0;i<wallPts.length;i+=3)if(!(paint.h!==false&&wallPts[i+2]))wp.push(wallPts[i],wallPts[i+1]);const ss=screenSize(mv.st.size,mv.st.ar);planCanvas=renderPlan({screen:mv.st.on?{x:0,w:ss.w,label:`${mv.st.size}″ ${mv.st.ar==='2.35'?'2.35:1':'16:9'} (${ft(ss.w)} wide)`}:null,B,wallPts:wp,items:serItems(),cat,paint});document.getElementById('planImg').src=planCanvas.toDataURL('image/png');document.getElementById('planM').classList.add('open');return planCanvas;}
 document.getElementById('planBtn').onclick=makePlan;
 function dlFile(url,name){const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();}
 document.getElementById('dlPng').onclick=()=>planCanvas.toBlob(b=>{const u=URL.createObjectURL(b);dlFile(u,'floor-plan.png');setTimeout(()=>URL.revokeObjectURL(u),5000);});
@@ -202,6 +209,20 @@ function loadJsPDF(){return window.jspdf?Promise.resolve():new Promise((ok,no)=>
 document.getElementById('dlPdf').onclick=async()=>{try{await loadJsPDF();const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'letter'});const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=24;const r=Math.min((pw-2*m)/planCanvas.width,(ph-2*m)/planCanvas.height);
  pdf.addImage(planCanvas.toDataURL('image/jpeg',0.92),'JPEG',(pw-planCanvas.width*r)/2,(ph-planCanvas.height*r)/2,planCanvas.width*r,planCanvas.height*r);pdf.save('floor-plan.pdf');}catch(e){toast('PDF unavailable, using Print');window.print();}};
 document.getElementById('prPlan').onclick=()=>window.print();
-window.planner={makePlan,setPaint,getPaint:()=>paint,wallCount:()=>wallPts.length/3,items,addItem,ser,enc,dec,load,select,cam,goView,setLock,isAnimating:()=>!!anim,
+// ---- movie mode
+const mv=setupMovie({S,B,hemi,dl,U:PU});window.__mv=mv;
+function setMovie(p,addProj=true){Object.assign(mv.st,{on:false,light:1,size:120,ar:'16:9',y:0.6},p);mv.st.size=Math.min(150,Math.max(90,+mv.st.size));const {w,h}=mv.apply();
+ if(mv.st.on&&addProj&&!items.some(o=>o.userData.itemId==='projector'))addItem('projector',{x:0,z:B.z1-0.35,r:0});
+ const $=id=>document.getElementById(id);$('mvOn').checked=mv.st.on;$('mvLight').value=Math.round(mv.st.light*100);$('mvLv').textContent=Math.round(mv.st.light*100)+'%';$('mvSize').value=mv.st.size;$('mvSz').textContent=mv.st.size+'″ diagonal';$('mvY').value=mv.st.y;$('mvH').textContent=ft(mv.st.y);
+ document.querySelectorAll('.mvAr').forEach(b=>b.classList.toggle('on',b.dataset.ar===mv.st.ar));$('mvDim').textContent=`Image ${ft(w)} W × ${ft(h)} H · top at ${ft(mv.st.y+h)}`;$('movieBtn').classList.toggle('on',mv.st.on);}
+const upd=(k,v)=>setMovie({...mv.st,[k]:v});
+document.getElementById('mvOn').onchange=e=>upd('on',e.target.checked);document.getElementById('mvLight').oninput=e=>upd('light',e.target.value/100);
+document.getElementById('mvSize').oninput=e=>upd('size',+e.target.value);document.getElementById('mvY').oninput=e=>upd('y',+e.target.value);
+document.querySelectorAll('.mvAr').forEach(b=>b.onclick=()=>upd('ar',b.dataset.ar));
+function toggleMovie(){const card=document.getElementById('movie');const open=!card.classList.contains('open');card.classList.toggle('open',open);if(open&&!mv.st.on)setMovie({...mv.st,on:true,light:Math.min(mv.st.light,0.15)});}
+document.getElementById('movieBtn').onclick=toggleMovie;
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='m'&&!['INPUT','SELECT'].includes(e.target.tagName))toggleMovie();});
+setMovie(mv.st,false);fromHash();
+window.planner={makePlan,setMovie,getMovie:()=>({...mv.st}),setPaint,getPaint:()=>paint,wallCount:()=>wallPts.length/3,items,addItem,ser,enc,dec,load,select,cam,goView,setLock,isAnimating:()=>!!anim,
  framed(){cam.updateMatrixWorld();let ok=true;for(const x of[B.x0,B.x1])for(const z of[B.z0,B.z1]){const v=new THREE.Vector3(x,0,z).project(cam);if(Math.abs(v.x)>1.001||Math.abs(v.y)>1.001)ok=false;}return ok;}};
 </script></body></html>

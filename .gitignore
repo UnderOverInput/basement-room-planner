@@ -3,3 +3,4 @@ src/
 test.py
 dims.txt
 test_panel.py
+test_paint.py

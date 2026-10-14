@@ -17,6 +17,11 @@ button,select,input{background:#1d2027;color:#e6e6e6;border:1px solid #333845;bo
 #compass{position:absolute;right:12px;top:58px;width:56px;height:56px;border-radius:50%;background:#15171cd0;border:1px solid #333845}
 #compass svg{width:100%;height:100%;transition:transform .05s}
 #joy{position:absolute;left:24px;bottom:60px;width:110px;height:110px;border-radius:50%;background:#ffffff14;border:1px solid #ffffff30;display:none;touch-action:none}#joy i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#ffffff50}
+.card{position:absolute;top:110px;left:10px;width:280px;max-width:calc(100% - 20px);background:#15171cf5;border:1px solid #2a2f3a;border-radius:12px;padding:12px;display:none;z-index:4}.card.open{display:block}
+.ch{display:flex;justify-content:space-between;align-items:center}.x{min-width:44px;min-height:44px;background:none;border:0;font-size:16px}.lbl{color:#8a90a0;font-size:11px;text-transform:uppercase;margin:8px 0 4px}
+#sw,#fl{display:flex;flex-wrap:wrap;gap:6px}.swb{width:44px;height:44px;border-radius:10px;padding:0;border:2px solid #333845}.swb.on,.flb.on{outline:2px solid #4d8dff;outline-offset:1px}.flb{min-height:44px;padding:0 10px;display:flex;align-items:center;gap:6px}.flb i{width:24px;height:24px;border-radius:5px;background-size:cover;display:inline-block}
+#planM{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:20;padding:12px}#planM.open{display:flex}#planM .pc{background:#15171c;border-radius:12px;padding:12px;max-width:100%;max-height:100%;overflow:auto}#planImg{display:block;max-width:min(1000px,100%);max-height:70vh;background:#fff;border-radius:6px}
+@media print{body>*:not(#planM){display:none!important}#planM{position:static;background:#fff;display:block!important;padding:0}#planM .ch,#planM .pc>div:last-child{display:none!important}#planM .pc{background:#fff;padding:0}#planImg{max-width:100%;max-height:none;width:100%}@page{size:landscape;margin:10mm}}
 #toast{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#3b6fd8;padding:8px 14px;border-radius:8px;display:none}
 #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:#0e0f12;z-index:9}
 @media(pointer:coarse){button,select{min-height:44px;min-width:44px}input[type=checkbox]{width:22px;height:22px}}
@@ -33,16 +38,20 @@ label{display:flex;gap:4px;align-items:center;font-size:12px}
 <div class="grp"><button data-v="top">Top</button><button data-v="front">Front</button><button data-v="side">Side</button><button data-v="iso">3/4</button><button id="fit" title="F">Fit room</button></div>
 <button id="lock">Lock to plan</button>
 <div class="grp"><label><input type="checkbox" id="snapG" checked>Grid 6″</label><label><input type="checkbox" id="snapA" checked>15°</label></div>
-<select id="layouts"><option value="">Layouts…</option></select><button id="save">Save</button><button id="share">Share layout</button><button id="clear">Clear</button>
+<select id="layouts"><option value="">Layouts…</option></select><button id="save">Save</button><button id="share">Share layout</button><button id="clear">Clear</button><button id="paintBtn">Paint & floor</button><button id="planBtn">Floor plan</button>
 <a href="https://poly.cam/capture/0503709E-BDD0-4D62-BD74-C1BD9F886780" target="_blank" rel="noopener">Original scan on Polycam</a></div>
 <div id="compass" title="Compass: N is the far wall in Top view"><svg viewBox="-50 -50 100 100"><circle r="44" fill="none" stroke="#444a58" stroke-width="2"/><path d="M0-38L9 0H-9Z" fill="#e05050"/><path d="M0 38L9 0H-9Z" fill="#9aa0b0"/><text y="-22" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" transform="translate(0,-4)">N</text></svg></div>
 <div id="sel"><b id="selName"></b><small id="selDim" style="color:#8a90a0"></small><label>↻<input type="range" id="rotS" min="0" max="359" step="15" style="width:110px"><span id="rotV"></span></label><input type="color" id="col"><button id="dup">Duplicate</button><button id="del">Delete</button><button id="desel">Done</button></div>
+<div id="paint" class="card"><div class="ch"><b>Paint & flooring</b><button class="x" data-close="paint">✕</button></div>
+<div class="lbl">Walls</div><div id="sw"></div><label style="margin-top:6px">Custom <input type="color" id="wallPick" value="#cfc6b8"></label>
+<div class="lbl">Floor</div><div id="fl"></div><label style="margin-top:10px;min-height:44px"><input type="checkbox" id="hideC" checked style="width:22px;height:22px"> Hide clutter (inflatable &amp; floor items)</label><button id="paintReset" style="margin-top:10px;width:100%">Reset to original scan</button></div>
 <div id="joy"><i></i></div><div id="toast"></div><div id="hint"></div></div>
-<div id="side"><div id="handle"><i id="grip"></i><button class="hb" id="ptog" title="Minimize/expand panel (P)" aria-label="Toggle panel">›</button><span id="ptitle">Furniture</span><button class="hb" id="pclose" title="Hide panel" aria-label="Hide panel">✕</button></div><small id="roomdim"></small><div id="list"></div></div><button id="pill" aria-label="Show furniture panel">☰ Furniture</button>
+<div id="side"><div id="handle"><i id="grip"></i><button class="hb" id="ptog" title="Minimize/expand panel (P)" aria-label="Toggle panel">›</button><span id="ptitle">Furniture</span><button class="hb" id="pclose" title="Hide panel" aria-label="Hide panel">✕</button></div><small id="roomdim"></small><div id="list"></div></div><div id="planM"><div class="pc"><div class="ch"><b>Floor plan</b><button class="x" data-close="planM">✕</button></div><img id="planImg" alt="Floor plan"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button id="dlPng">Download PNG</button><button id="dlPdf">Download PDF</button><button id="prPlan">Print</button></div></div></div><button id="pill" aria-label="Show furniture panel">☰ Furniture</button>
 <script type="module">
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {catalog,setColor} from './furniture.js';
+import {catalog,setColor} from './furniture.js';import {FLOORS,SWATCHES,patchRoom,applyPaint,U as PU,MASK,loadMask} from './paint.js';import {renderPlan} from './plan.js';
 const B={x0:-4.26,x1:4.26,z0:-3.07,z1:3.07,ceil:3.9};const EYE=1.676,ROOM_ROT=-1.58*Math.PI/180,GRID=0.1524;
+let paint={w:null,f:'scan',h:true};let wallPts=[];
 const touch=matchMedia('(pointer:coarse)').matches;
 const ft=m=>{const i=Math.round(m*39.3701);return `${Math.floor(i/12)}′${i%12}″`;};
 document.getElementById('roomdim').textContent=`Room ≈ ${ft(B.x1-B.x0)} × ${ft(B.z1-B.z0)}, ceiling ${ft(B.ceil)}`;
@@ -80,7 +89,9 @@ document.getElementById('fit').onclick=()=>{if(mode!=='orbit')setMode('orbit');g
 function setLock(on){locked=on;document.getElementById('lock').classList.toggle('on',on);oc.enableRotate=!on;if(on){if(mode!=='orbit')setMode('orbit');goView('top');}}
 document.getElementById('lock').onclick=()=>setLock(!locked);
 // load room
-let room;new GLTFLoader().load('room.glb',g=>{room=g.scene;room.rotation.y=ROOM_ROT;room.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.material.side=THREE.DoubleSide;o.material.clippingPlanes=[clip];}});S.add(room);window.roomLoaded=true;document.getElementById('load').remove();},undefined,()=>{document.getElementById('load').textContent='Could not load room scan';});
+const maskReady=loadMask('clutter-mask.png');
+const fill=new THREE.Mesh(new THREE.PlaneGeometry(B.x1-B.x0+0.4,B.z1-B.z0+0.4),new THREE.MeshStandardMaterial({color:0x615955,roughness:0.95}));fill.rotation.x=-Math.PI/2;fill.position.y=-0.006;fill.material.clippingPlanes=[clip];patchRoom(fill.material);S.add(fill);
+let room;new GLTFLoader().load('room.glb',g=>{room=g.scene;room.rotation.y=ROOM_ROT;room.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.material.side=THREE.DoubleSide;if(!o.geometry.attributes.normal)o.geometry.computeVertexNormals();o.material.clippingPlanes=[clip];patchRoom(o.material);}});room.updateMatrixWorld(true);maskReady.then(()=>{wallPts=collectWalls(room);applyPaint(paint);PU.uHide.value=paint.h===false?0:1;window.roomLoaded=true;});S.add(room);document.getElementById('load').remove();},undefined,()=>{document.getElementById('load').textContent='Could not load room scan';});
 // furniture list
 const byCat={};catalog.forEach(c=>(byCat[c.category]??=[]).push(c));const L=document.getElementById('list');
 for(const k in byCat){L.insertAdjacentHTML('beforeend',`<div class="cat">${k}</div>`);for(const c of byCat[k]){const d=document.createElement('div');d.className='item';d.innerHTML=`<span>${c.name}</span><small>${ft(c.dims.w)} × ${ft(c.dims.d)}</small>`;d.onclick=()=>{const t=mode==='orbit'?oc.target:cam.position;select(addItem(c.id,{x:t.x,z:t.z,r:0}));};L.appendChild(d);}}
@@ -145,8 +156,9 @@ function tick(){const dt=Math.min(clock.getDelta(),0.1);let az;
  csvg.style.transform=`rotate(${THREE.MathUtils.radToDeg(az)}deg)`;R.render(S,cam);requestAnimationFrame(tick);}
 resize();goView('iso',false);hint();tick();
 // layouts
-const ser=()=>items.map(o=>({i:o.userData.itemId,x:+o.position.x.toFixed(2),z:+o.position.z.toFixed(2),r:o.userData.rot,...(o.userData.color?{c:o.userData.color}:{})}));
-function load(arr){items.slice().forEach(o=>S.remove(o));items.length=0;select(null);(arr||[]).forEach(s=>addItem(s.i,s));}
+const serItems=()=>items.map(o=>({i:o.userData.itemId,x:+o.position.x.toFixed(2),z:+o.position.z.toFixed(2),r:o.userData.rot,...(o.userData.color?{c:o.userData.color}:{})}));
+const ser=()=>({items:serItems(),...(paint.w?{w:paint.w}:{}),...(paint.f&&paint.f!=='scan'?{f:paint.f}:{}),...(paint.h===false?{h:0}:{})});
+function load(data){const arr=Array.isArray(data)?data:(data?.items||[]);items.slice().forEach(o=>S.remove(o));items.length=0;select(null);arr.forEach(s=>addItem(s.i,s));setPaint(Array.isArray(data)?{}:{w:data?.w||null,f:data?.f||'scan',h:data?.h!==0});}
 const LS='basementLayouts';const getL=()=>JSON.parse(localStorage.getItem(LS)||'{}');
 function refreshL(){const s=document.getElementById('layouts');s.innerHTML='<option value="">Layouts…</option>'+Object.keys(getL()).map(k=>`<option>${k.replace(/</g,'&lt;')}</option>`).join('');}refreshL();
 document.getElementById('save').onclick=()=>{const n=prompt('Layout name','Layout '+(Object.keys(getL()).length+1));if(!n)return;const l=getL();l[n]=ser();localStorage.setItem(LS,JSON.stringify(l));refreshL();toast('Saved “'+n+'”');};
@@ -170,6 +182,26 @@ addEventListener('keydown',e=>{if(e.key.toLowerCase()==='p'&&!['INPUT','SELECT']
  h.addEventListener('pointercancel',()=>y0=null);}
 addEventListener('resize',()=>setPanel(panel,false));setPanel(panel,false);
 window.setPanel=setPanel;
-window.planner={items,addItem,ser,enc,dec,load,select,cam,goView,setLock,isAnimating:()=>!!anim,
+// ---- paint & floor
+function collectWalls(root){const out=[];const v=new THREE.Vector3(),n=new THREE.Vector3();root.traverse(o=>{if(!o.isMesh)return;const P=o.geometry.attributes.position,N=o.geometry.attributes.normal;if(!N)return;const nm=new THREE.Matrix3().getNormalMatrix(o.matrixWorld);const step=Math.max(1,Math.floor(P.count/60000));
+ for(let i=0;i<P.count;i+=step){n.fromBufferAttribute(N,i).applyMatrix3(nm).normalize();if(Math.abs(n.y)>0.3)continue;v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);if(v.y<0.4||v.y>2.2)continue;if(v.x<B.x0-0.3||v.x>B.x1+0.3||v.z<B.z0-0.3||v.z>B.z1+0.3)continue;out.push(v.x,v.z,MASK.test&&MASK.test(v.x,v.z)?1:0);}});return out;}
+function setPaint(p){paint={w:p.w||null,f:p.f||'scan',h:p.h!==false};applyPaint(paint);PU.uHide.value=paint.h?1:0;const hc=document.getElementById('hideC');if(hc)hc.checked=paint.h;document.querySelectorAll('.swb').forEach(b=>b.classList.toggle('on',(b.dataset.c||null)===paint.w));document.querySelectorAll('.flb').forEach(b=>b.classList.toggle('on',b.dataset.f===paint.f));}
+{const sw=document.getElementById('sw');for(const [n,c] of SWATCHES){const b=document.createElement('button');b.className='swb';b.title=n;b.setAttribute('aria-label',n);if(c){b.dataset.c=c;b.style.background=c;}else{b.textContent='∅';}b.onclick=()=>setPaint({...paint,w:c});sw.appendChild(b);}
+ document.getElementById('wallPick').oninput=e=>setPaint({...paint,w:e.target.value});
+ const fl=document.getElementById('fl');for(const id in FLOORS){const b=document.createElement('button');b.className='flb';b.dataset.f=id;b.textContent=FLOORS[id].name;b.onclick=()=>setPaint({...paint,f:id});fl.appendChild(b);}
+ document.getElementById('paintReset').onclick=()=>setPaint({h:paint.h});document.getElementById('hideC').onchange=e=>setPaint({...paint,h:e.target.checked});setPaint(paint);}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).classList.remove('open'));
+document.getElementById('paintBtn').onclick=()=>document.getElementById('paint').classList.toggle('open');
+// ---- floor plan export
+let planCanvas=null;
+function makePlan(){const wp=[];for(let i=0;i<wallPts.length;i+=3)if(!(paint.h!==false&&wallPts[i+2]))wp.push(wallPts[i],wallPts[i+1]);planCanvas=renderPlan({B,wallPts:wp,items:serItems(),cat,paint});document.getElementById('planImg').src=planCanvas.toDataURL('image/png');document.getElementById('planM').classList.add('open');return planCanvas;}
+document.getElementById('planBtn').onclick=makePlan;
+function dlFile(url,name){const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();}
+document.getElementById('dlPng').onclick=()=>planCanvas.toBlob(b=>{const u=URL.createObjectURL(b);dlFile(u,'floor-plan.png');setTimeout(()=>URL.revokeObjectURL(u),5000);});
+function loadJsPDF(){return window.jspdf?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});}
+document.getElementById('dlPdf').onclick=async()=>{try{await loadJsPDF();const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'letter'});const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=24;const r=Math.min((pw-2*m)/planCanvas.width,(ph-2*m)/planCanvas.height);
+ pdf.addImage(planCanvas.toDataURL('image/jpeg',0.92),'JPEG',(pw-planCanvas.width*r)/2,(ph-planCanvas.height*r)/2,planCanvas.width*r,planCanvas.height*r);pdf.save('floor-plan.pdf');}catch(e){toast('PDF unavailable, using Print');window.print();}};
+document.getElementById('prPlan').onclick=()=>window.print();
+window.planner={makePlan,setPaint,getPaint:()=>paint,wallCount:()=>wallPts.length/3,items,addItem,ser,enc,dec,load,select,cam,goView,setLock,isAnimating:()=>!!anim,
  framed(){cam.updateMatrixWorld();let ok=true;for(const x of[B.x0,B.x1])for(const z of[B.z0,B.z1]){const v=new THREE.Vector3(x,0,z).project(cam);if(Math.abs(v.x)>1.001||Math.abs(v.y)>1.001)ok=false;}return ok;}};
 </script></body></html>

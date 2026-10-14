@@ -1,0 +1,96 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Basement Room Planner</title>
+<meta name="description" content="Walk through the scanned basement in 3D and try furniture layouts.">
+<meta property="og:title" content="Basement Room Planner"><meta property="og:description" content="Walk the scanned basement in 3D and try furniture layouts.">
+<meta property="og:image" content="https://underoverinput.github.io/basement-room-planner/og.png"><meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://underoverinput.github.io/basement-room-planner/og.png">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0e0f12;color:#e6e6e6;font:14px system-ui,-apple-system,sans-serif;overflow:hidden}
+#c{position:fixed;inset:0}#top{position:fixed;top:0;left:0;right:300px;display:flex;gap:6px;flex-wrap:wrap;padding:10px;align-items:center;pointer-events:none}
+#top>*{pointer-events:auto}h1{font-size:15px;margin:0 8px 0 0;font-weight:600}
+button,select,input{background:#1d2027;color:#e6e6e6;border:1px solid #333845;border-radius:8px;padding:7px 10px;font:inherit}button:hover{background:#2a2f3a}button.on{background:#3b6fd8;border-color:#3b6fd8}
+#side{position:fixed;top:0;right:0;bottom:0;width:300px;background:#15171cee;border-left:1px solid #262a33;overflow:auto;padding:12px}
+.cat{color:#8a90a0;font-size:11px;text-transform:uppercase;margin:12px 0 4px}.item{display:flex;justify-content:space-between;padding:7px 9px;border-radius:7px;cursor:pointer}.item:hover{background:#232733}.item small{color:#8a90a0}
+#sel{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:#15171cf2;border:1px solid #2a2f3a;border-radius:12px;padding:8px;display:none;gap:6px;align-items:center}
+#hint{position:fixed;left:10px;bottom:10px;color:#8a90a0;font-size:12px}a{color:#7aa7ff}
+#joy{position:fixed;left:24px;bottom:70px;width:110px;height:110px;border-radius:50%;background:#ffffff14;border:1px solid #ffffff30;display:none;touch-action:none}#joy i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#ffffff50}
+#toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#3b6fd8;padding:8px 14px;border-radius:8px;display:none}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:#0e0f12}
+@media(max-width:760px){#top{right:0}#side{top:auto;left:0;width:auto;height:38vh;border-left:0;border-top:1px solid #262a33;border-radius:14px 14px 0 0}#side.min{height:44px;overflow:hidden}#sel{bottom:calc(38vh + 10px);flex-wrap:wrap;width:94vw;justify-content:center}#hint{display:none}#joy{bottom:calc(38vh + 20px)}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}</script>
+</head><body><canvas id="c"></canvas><div id="load">Loading basement scan…</div>
+<div id="top"><h1>Basement Planner</h1><button id="mOrbit" class="on">Orbit</button><button id="mWalk">Walk</button>
+<select id="layouts"><option value="">Layouts…</option></select><button id="save">Save</button><button id="share">Share layout</button><button id="clear">Clear</button>
+<a href="https://poly.cam/capture/0503709E-BDD0-4D62-BD74-C1BD9F886780" target="_blank" rel="noopener">View original scan on Polycam</a></div>
+<div id="side"><div id="sideHead" style="display:flex;justify-content:space-between;align-items:center"><b>Add furniture</b><small id="roomdim" style="color:#8a90a0"></small></div><div id="list"></div></div>
+<div id="sel"><b id="selName"></b><small id="selDim" style="color:#8a90a0"></small><button id="rotL">⟲ 15°</button><button id="rotR">⟳ 15°</button><input type="color" id="col"><button id="dup">Duplicate</button><button id="del">Delete</button></div>
+<div id="joy"><i></i></div><div id="toast"></div>
+<div id="hint">Orbit: drag to look, scroll to zoom · Click item to select, drag to move · R/Q rotate · Del delete · Walk: WASD + drag</div>
+<script type="module">
+import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {catalog,setColor} from './furniture.js';
+const B={x0:-4.26,x1:4.26,z0:-3.07,z1:3.07,ceil:3.9};const EYE=1.6;
+const ft=m=>{const i=Math.round(m*39.3701);return `${Math.floor(i/12)}′${i%12}″`;};
+document.getElementById('roomdim').textContent=`Room ≈ ${ft(B.x1-B.x0)} × ${ft(B.z1-B.z0)}`;
+const cv=document.getElementById('c');const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.localClippingEnabled=true;const clip=new THREE.Plane(new THREE.Vector3(0,-1,0),3.3);
+const S=new THREE.Scene();S.background=new THREE.Color(0x0e0f12);
+const cam=new THREE.PerspectiveCamera(60,1,0.05,100);cam.position.set(0,7.5,7.5);
+S.add(new THREE.HemisphereLight(0xffffff,0x444444,1.6));const dl=new THREE.DirectionalLight(0xffffff,1.2);dl.position.set(3,6,2);dl.castShadow=true;S.add(dl);
+const oc=new OrbitControls(cam,cv);oc.target.set(0,0.5,0);oc.enableDamping=true;oc.maxPolarAngle=Math.PI*0.49;
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(B.x1-B.x0,B.z1-B.z0),new THREE.ShadowMaterial({opacity:0.25}));floor.rotation.x=-Math.PI/2;floor.position.y=0.002;floor.receiveShadow=true;S.add(floor);
+function resize(){const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+new GLTFLoader().load('room.glb',g=>{g.scene.traverse(o=>{if(o.isMesh){o.receiveShadow=true;o.material.side=THREE.DoubleSide;o.material.clippingPlanes=[clip];}});S.add(g.scene);window.roomLoaded=true;document.getElementById('load').remove();},undefined,e=>{document.getElementById('load').textContent='Could not load room scan';});
+// list
+const byCat={};catalog.forEach(c=>(byCat[c.category]??=[]).push(c));const L=document.getElementById('list');
+for(const k in byCat){L.insertAdjacentHTML('beforeend',`<div class="cat">${k}</div>`);for(const c of byCat[k]){const d=document.createElement('div');d.className='item';d.innerHTML=`<span>${c.name}</span><small>${ft(c.dims.w)} × ${ft(c.dims.d)}</small>`;d.onclick=()=>{select(addItem(c.id,{x:clampX(oc.target.x,c),z:0,r:0}));};L.appendChild(d);}}
+const items=[];const cat=id=>catalog.find(c=>c.id===id);
+function halfExt(o){const c=cat(o.userData.itemId),a=o.rotation.y,cs=Math.abs(Math.cos(a)),sn=Math.abs(Math.sin(a));return {hx:(c.dims.w*cs+c.dims.d*sn)/2,hz:(c.dims.w*sn+c.dims.d*cs)/2};}
+function clampObj(o){const {hx,hz}=halfExt(o);o.position.x=THREE.MathUtils.clamp(o.position.x,B.x0+hx,Math.max(B.x0+hx,B.x1-hx));o.position.z=THREE.MathUtils.clamp(o.position.z,B.z0+hz,Math.max(B.z0+hz,B.z1-hz));o.position.y=0;}
+function clampX(x){return x;}
+function addItem(id,s){const c=cat(id);if(!c)return;const g=c.build();g.position.set(s.x||0,0,s.z||0);g.rotation.y=(s.r||0)*Math.PI/180;g.userData.itemId=id;g.userData.rot=s.r||0;if(s.c){setColor(g,s.c);g.userData.color=s.c;}clampObj(g);S.add(g);items.push(g);return g;}
+let sel=null,box=null;const selUI=document.getElementById('sel');
+function select(o){sel=o;if(box){S.remove(box);box=null;}if(!o){selUI.style.display='none';return;}box=new THREE.BoxHelper(o,0x3b6fd8);S.add(box);const c=cat(o.userData.itemId);selUI.style.display='flex';document.getElementById('selName').textContent=c.name;document.getElementById('selDim').textContent=`${ft(c.dims.w)} W × ${ft(c.dims.d)} D × ${ft(c.dims.h)} H`;let col='#888888';o.traverse(m=>{if(m.isMesh&&m.material.__main)col='#'+m.material.color.getHexString();});document.getElementById('col').value=col;}
+function rot(d){if(!sel)return;sel.userData.rot=((sel.userData.rot+d)%360+360)%360;sel.rotation.y=sel.userData.rot*Math.PI/180;clampObj(sel);box.update();}
+document.getElementById('rotL').onclick=()=>rot(15);document.getElementById('rotR').onclick=()=>rot(-15);
+document.getElementById('col').oninput=e=>{if(sel){setColor(sel,e.target.value);sel.userData.color=e.target.value;}};
+document.getElementById('dup').onclick=()=>{if(sel)select(addItem(sel.userData.itemId,{x:sel.position.x+0.3,z:sel.position.z+0.3,r:sel.userData.rot,c:sel.userData.color}));};
+const del=()=>{if(!sel)return;S.remove(sel);items.splice(items.indexOf(sel),1);select(null);};document.getElementById('del').onclick=del;
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='Delete'||e.key==='Backspace')del();if(e.key==='r')rot(-15);if(e.key==='q')rot(15);keys[e.code]=true;});addEventListener('keyup',e=>keys[e.code]=false);
+// picking & drag
+const rc=new THREE.Raycaster(),pl=new THREE.Plane(new THREE.Vector3(0,1,0),0),nd=new THREE.Vector2();let drag=null,off=new THREE.Vector3(),downAt=null;
+function ndc(e){const r=cv.getBoundingClientRect();nd.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(nd,cam);}
+function hitItem(){const h=rc.intersectObjects(items,true)[0];if(!h)return null;let o=h.object;while(o&&!items.includes(o))o=o.parent;return o;}
+cv.addEventListener('pointerdown',e=>{ndc(e);downAt={x:e.clientX,y:e.clientY,t:Date.now()};const o=hitItem();if(o){select(o);drag=o;const p=new THREE.Vector3();rc.ray.intersectPlane(pl,p);off.subVectors(o.position,p);oc.enabled=false;cv.setPointerCapture(e.pointerId);}else if(mode==='walk'){look={x:e.clientX,y:e.clientY};}});
+cv.addEventListener('pointermove',e=>{if(drag){ndc(e);const p=new THREE.Vector3();if(rc.ray.intersectPlane(pl,p)){drag.position.set(p.x+off.x,0,p.z+off.z);clampObj(drag);box.update();}}else if(look){yaw-=(e.clientX-look.x)*0.004;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-look.y)*0.004,-1.3,1.3);look={x:e.clientX,y:e.clientY};}});
+cv.addEventListener('pointerup',e=>{const moved=downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>6;if(!drag&&!moved){ndc(e);if(!hitItem()){select(null);if(mode==='walk'){const p=new THREE.Vector3();if(rc.ray.intersectPlane(pl,p))walkTo=p;}}}drag=null;look=null;oc.enabled=mode==='orbit';});
+// walk mode
+let mode='orbit',yaw=0,pitch=0,look=null,keys={},walkTo=null,joy={x:0,y:0};
+function setMode(m){mode=m;document.getElementById('mOrbit').classList.toggle('on',m==='orbit');document.getElementById('mWalk').classList.toggle('on',m==='walk');oc.enabled=m==='orbit';clip.constant=m==='orbit'?3.3:99;document.getElementById('joy').style.display=m==='walk'&&matchMedia('(pointer:coarse)').matches?'block':'none';
+ if(m==='walk'){cam.position.set(0,EYE,B.z1-0.5);yaw=0;pitch=-0.1;}else{cam.position.set(0,7.5,7.5);oc.target.set(0,0.5,0);}}
+document.getElementById('mOrbit').onclick=()=>setMode('orbit');document.getElementById('mWalk').onclick=()=>setMode('walk');
+const J=document.getElementById('joy'),Ji=J.querySelector('i');J.addEventListener('pointermove',e=>{if(!e.buttons&&e.pointerType!=='touch')return;const r=J.getBoundingClientRect();let x=(e.clientX-r.left-55)/55,y=(e.clientY-r.top-55)/55;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}joy={x,y};Ji.style.transform=`translate(${x*35}px,${y*35}px)`;});
+J.addEventListener('pointerup',()=>{joy={x:0,y:0};Ji.style.transform='';});J.addEventListener('pointerleave',()=>{joy={x:0,y:0};Ji.style.transform='';});
+const clock=new THREE.Clock();
+function tick(){const dt=Math.min(clock.getDelta(),0.1);
+ if(mode==='walk'){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y,s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;const sp=2*dt;
+  const fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  if(f||s){walkTo=null;cam.position.addScaledVector(fw,f*sp).addScaledVector(rt,s*sp);}else if(walkTo){const d=new THREE.Vector3(walkTo.x-cam.position.x,0,walkTo.z-cam.position.z);if(d.length()<0.1)walkTo=null;else{cam.position.addScaledVector(d.normalize(),sp);}}
+  cam.position.x=THREE.MathUtils.clamp(cam.position.x,B.x0+0.2,B.x1-0.2);cam.position.z=THREE.MathUtils.clamp(cam.position.z,B.z0+0.2,B.z1-0.2);cam.position.y=EYE;cam.rotation.set(pitch,yaw,0,'YXZ');}
+ else oc.update();R.render(S,cam);requestAnimationFrame(tick);}tick();
+// layouts
+const ser=()=>items.map(o=>({i:o.userData.itemId,x:+o.position.x.toFixed(2),z:+o.position.z.toFixed(2),r:o.userData.rot,...(o.userData.color?{c:o.userData.color}:{})}));
+function load(arr){items.slice().forEach(o=>S.remove(o));items.length=0;select(null);(arr||[]).forEach(s=>addItem(s.i,s));}
+const LS='basementLayouts';const getL=()=>JSON.parse(localStorage.getItem(LS)||'{}');
+function refreshL(){const sel=document.getElementById('layouts');sel.innerHTML='<option value="">Layouts…</option>'+Object.keys(getL()).map(k=>`<option>${k.replace(/</g,'&lt;')}</option>`).join('');}refreshL();
+document.getElementById('save').onclick=()=>{const n=prompt('Layout name','Layout '+(Object.keys(getL()).length+1));if(!n)return;const l=getL();l[n]=ser();localStorage.setItem(LS,JSON.stringify(l));refreshL();toast('Saved “'+n+'”');};
+document.getElementById('layouts').onchange=e=>{if(e.target.value)load(getL()[e.target.value]);};
+document.getElementById('clear').onclick=()=>load([]);
+function toast(t){const T=document.getElementById('toast');T.textContent=t;T.style.display='block';clearTimeout(T._t);T._t=setTimeout(()=>T.style.display='none',2200);}
+const enc=a=>btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/')))));
+document.getElementById('share').onclick=async()=>{location.hash='l='+enc(ser());const u=location.href;try{if(navigator.share&&matchMedia('(pointer:coarse)').matches)await navigator.share({title:'Basement layout',url:u});else{await navigator.clipboard.writeText(u);toast('Link copied');}}catch{toast('Link is in the address bar');}};
+function fromHash(){const m=location.hash.match(/l=([\w-]+)/);if(m)try{load(dec(m[1]));}catch(e){console.warn('bad layout link');}}fromHash();addEventListener('hashchange',fromHash);
+document.getElementById('sideHead').onclick=()=>{if(innerWidth<=760)document.getElementById('side').classList.toggle('min');};
+window.planner={items,addItem,ser,enc,dec,load,select,cam};
+</script></body></html>

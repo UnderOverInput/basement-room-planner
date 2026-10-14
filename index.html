@@ -6,11 +6,11 @@
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://underoverinput.github.io/basement-room-planner/og.png">
 <style>
 *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:#0e0f12;color:#e6e6e6;font:14px system-ui,-apple-system,sans-serif;overflow:hidden}
-#view{position:fixed;top:0;left:0;right:300px;bottom:0}#c{display:block;width:100%;height:100%;touch-action:none}
+#view{position:fixed;top:0;left:0;right:300px;bottom:0}body[data-panel=min] #view{right:44px}body[data-panel=hidden] #view{right:0}#c{display:block;width:100%;height:100%;touch-action:none}
 #top{position:absolute;top:0;left:0;right:0;display:flex;gap:6px;flex-wrap:wrap;padding:10px;align-items:center;pointer-events:none}#top>*{pointer-events:auto}
 h1{font-size:15px;margin:0 6px 0 0;font-weight:600}.grp{display:flex;gap:2px;background:#15171cd0;border-radius:9px;padding:2px}
 button,select,input{background:#1d2027;color:#e6e6e6;border:1px solid #333845;border-radius:8px;padding:6px 9px;font:inherit}button:hover{background:#2a2f3a}button.on{background:#3b6fd8;border-color:#3b6fd8}
-#side{position:fixed;top:0;right:0;bottom:0;width:300px;background:#15171c;border-left:1px solid #262a33;overflow:auto;padding:12px}
+#side{position:fixed;top:0;right:0;bottom:0;width:300px;background:#15171c;border-left:1px solid #262a33;display:flex;flex-direction:column;transition:transform .28s ease;z-index:5}#list{overflow:auto;padding:0 12px 12px;flex:1}#handle{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;touch-action:none;user-select:none}#handle .hb{min-width:44px;min-height:44px;border:0;background:none;font-size:18px;padding:0}#ptitle{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#grip{display:none}body[data-panel=min] #side{transform:translateX(calc(100% - 44px))}body[data-panel=hidden] #side{transform:translateX(100%)}body[data-panel=min] #ptitle,body[data-panel=min] #pclose,body[data-panel=min] #roomdim{visibility:hidden}#pill{position:fixed;left:10px;bottom:10px;min-height:44px;padding:0 16px;border-radius:22px;background:#3b6fd8;border:0;font-weight:600;z-index:6;display:none}body[data-panel=hidden] #pill{display:block}body[data-panel=hidden] #hint{bottom:62px}#roomdim{color:#8a90a0;padding:0 12px 6px;display:block}
 .cat{color:#8a90a0;font-size:11px;text-transform:uppercase;margin:12px 0 4px}.item{display:flex;justify-content:space-between;padding:7px 9px;border-radius:7px;cursor:pointer}.item:hover{background:#232733}.item small{color:#8a90a0}
 #sel{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#15171cf2;border:1px solid #2a2f3a;border-radius:12px;padding:8px;display:none;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:96%}
 #hint{position:absolute;left:10px;bottom:10px;color:#9aa0b0;font-size:12px;background:#0e0f12b0;padding:4px 8px;border-radius:6px}a{color:#7aa7ff}
@@ -19,9 +19,11 @@ button,select,input{background:#1d2027;color:#e6e6e6;border:1px solid #333845;bo
 #joy{position:absolute;left:24px;bottom:60px;width:110px;height:110px;border-radius:50%;background:#ffffff14;border:1px solid #ffffff30;display:none;touch-action:none}#joy i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#ffffff50}
 #toast{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#3b6fd8;padding:8px 14px;border-radius:8px;display:none}
 #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:#0e0f12;z-index:9}
+@media(pointer:coarse){button,select{min-height:44px;min-width:44px}input[type=checkbox]{width:22px;height:22px}}
+#sel button{min-height:44px}
 label{display:flex;gap:4px;align-items:center;font-size:12px}
-@media(max-width:760px){#view{right:0;bottom:38vh}#side{top:auto;left:0;width:auto;height:38vh;border-left:0;border-top:1px solid #262a33}#hint{font-size:11px;right:66px}#compass{top:auto;bottom:10px;right:10px;width:46px;height:46px}}
-@media(max-height:500px) and (orientation:landscape){#view{right:240px;bottom:0}#side{top:0;left:auto;right:0;width:240px;height:auto;border-top:0;border-left:1px solid #262a33}#compass{top:auto;bottom:10px}}
+@media(max-width:760px){#view{right:0!important;bottom:38vh}body[data-panel=min] #view{bottom:44px}body[data-panel=hidden] #view{bottom:0}#side{top:auto;left:0;width:auto;height:38vh;border-left:0;border-top:1px solid #262a33;border-radius:14px 14px 0 0}body[data-panel=min] #side{transform:translateY(calc(100% - 44px))}body[data-panel=hidden] #side{transform:translateY(100%)}body[data-panel=min] #ptitle,body[data-panel=min] #pclose{visibility:visible}#grip{display:block;position:absolute;left:50%;top:5px;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:#4a505e}#handle{position:relative}#hint{font-size:11px;right:66px}#compass{top:auto;bottom:10px;right:10px;width:46px;height:46px}}
+@media(max-height:500px) and (orientation:landscape){#view{right:240px;bottom:0!important}#side{top:0;left:auto;right:0;width:240px;height:auto;border-top:0;border-left:1px solid #262a33;border-radius:0}body[data-panel=min] #side{transform:translateX(calc(100% - 44px))}body[data-panel=hidden] #side{transform:translateX(100%)}body[data-panel=min] #ptitle,body[data-panel=min] #pclose{visibility:hidden}#grip{display:none!important}#compass{top:auto;bottom:10px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}</script>
 </head><body><div id="load">Loading room scan…</div>
@@ -36,7 +38,7 @@ label{display:flex;gap:4px;align-items:center;font-size:12px}
 <div id="compass" title="Compass: N is the far wall in Top view"><svg viewBox="-50 -50 100 100"><circle r="44" fill="none" stroke="#444a58" stroke-width="2"/><path d="M0-38L9 0H-9Z" fill="#e05050"/><path d="M0 38L9 0H-9Z" fill="#9aa0b0"/><text y="-22" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" transform="translate(0,-4)">N</text></svg></div>
 <div id="sel"><b id="selName"></b><small id="selDim" style="color:#8a90a0"></small><label>↻<input type="range" id="rotS" min="0" max="359" step="15" style="width:110px"><span id="rotV"></span></label><input type="color" id="col"><button id="dup">Duplicate</button><button id="del">Delete</button><button id="desel">Done</button></div>
 <div id="joy"><i></i></div><div id="toast"></div><div id="hint"></div></div>
-<div id="side"><div id="sideHead" style="display:flex;justify-content:space-between;align-items:center"><b>Add furniture</b><small id="roomdim" style="color:#8a90a0"></small></div><div id="list"></div></div>
+<div id="side"><div id="handle"><i id="grip"></i><button class="hb" id="ptog" title="Minimize/expand panel (P)" aria-label="Toggle panel">›</button><span id="ptitle">Furniture</span><button class="hb" id="pclose" title="Hide panel" aria-label="Hide panel">✕</button></div><small id="roomdim"></small><div id="list"></div></div><button id="pill" aria-label="Show furniture panel">☰ Furniture</button>
 <script type="module">
 import * as THREE from 'three';import {OrbitControls} from 'three/addons/controls/OrbitControls.js';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {catalog,setColor} from './furniture.js';
@@ -62,7 +64,7 @@ label('N wall',0,B.z0+0.3);label('S wall',0,B.z1-0.3);label('E',B.x1-0.3,0);labe
 // sizing
 function viewSize(){const r=view.getBoundingClientRect();return [Math.max(1,r.width),Math.max(1,r.height)];}
 function resize(){const [w,h]=viewSize();R.setPixelRatio(Math.min(devicePixelRatio||1,2));R.setSize(w,h,false);const th=Math.min(document.getElementById('top').offsetHeight+4,h*0.45);cam.aspect=w/(h-th);cam.setViewOffset(w,h-th,0,-th,w,h);cam.updateProjectionMatrix();if(mode==='orbit')goView(curView,false);}
-new ResizeObserver(resize).observe(view);
+new ResizeObserver(resize).observe(view);document.getElementById('side')?.addEventListener('transitionend',()=>resize());
 // framing
 const DIRS={top:new THREE.Vector3(0,1,0.0001),front:new THREE.Vector3(0,0.35,1),side:new THREE.Vector3(1,0.35,0),iso:new THREE.Vector3(0.8,0.95,1.1)};
 let curView='iso',anim=null,locked=false;
@@ -92,7 +94,7 @@ let sel=null,outline=null;const selUI=document.getElementById('sel');
 function makeOutline(o){const c=cat(o.userData.itemId),g=new THREE.Group();const geo=new THREE.EdgesGeometry(new THREE.BoxGeometry(c.dims.w+0.06,c.dims.h+0.04,c.dims.d+0.06));const l=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0x4d8dff,depthTest:false}));l.position.y=c.dims.h/2;l.renderOrder=9;g.add(l);
  const ring=new THREE.Mesh(new THREE.PlaneGeometry(c.dims.w+0.12,c.dims.d+0.12),new THREE.MeshBasicMaterial({color:0x3b6fd8,transparent:true,opacity:0.25,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=0.01;g.add(ring);return g;}
 function syncOutline(){if(outline&&sel){outline.position.copy(sel.position);outline.rotation.y=sel.rotation.y;}}
-function select(o){sel=o;if(outline){S.remove(outline);outline=null;}if(!o){selUI.style.display='none';hint();return;}outline=makeOutline(o);S.add(outline);syncOutline();const c=cat(o.userData.itemId);selUI.style.display='flex';document.getElementById('selName').textContent=c.name;document.getElementById('selDim').textContent=`${ft(c.dims.w)} W × ${ft(c.dims.d)} D × ${ft(c.dims.h)} H`;let col='#888888';o.traverse(m=>{if(m.isMesh&&m.material.__main)col='#'+m.material.color.getHexString();});document.getElementById('col').value=col;syncRotUI();hint();}
+function select(o){sel=o;if(o&&window.setPanel&&document.body.dataset.panel==='hidden')setPanel('min',false);if(window.setPanel)queueMicrotask(()=>document.getElementById('ptitle').textContent=o?cat(o.userData.itemId).name:'Furniture');if(outline){S.remove(outline);outline=null;}if(!o){selUI.style.display='none';hint();return;}outline=makeOutline(o);S.add(outline);syncOutline();const c=cat(o.userData.itemId);selUI.style.display='flex';document.getElementById('selName').textContent=c.name;document.getElementById('selDim').textContent=`${ft(c.dims.w)} W × ${ft(c.dims.d)} D × ${ft(c.dims.h)} H`;let col='#888888';o.traverse(m=>{if(m.isMesh&&m.material.__main)col='#'+m.material.color.getHexString();});document.getElementById('col').value=col;syncRotUI();hint();}
 const rotS=document.getElementById('rotS');function syncRotUI(){if(!sel)return;rotS.value=sel.userData.rot;document.getElementById('rotV').textContent=sel.userData.rot+'°';}
 rotS.oninput=()=>{if(!sel)return;setRot(sel,+rotS.value);clampObj(sel);syncOutline();syncRotUI();};
 const snapA=document.getElementById('snapA'),snapG=document.getElementById('snapG');snapA.onchange=()=>rotS.step=snapA.checked?15:1;
@@ -155,7 +157,19 @@ const enc=a=>btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/\+/g
 const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/')))));
 document.getElementById('share').onclick=async()=>{location.hash='l='+enc(ser());const u=location.href;try{if(navigator.share&&touch)await navigator.share({title:'Room layout',url:u});else{await navigator.clipboard.writeText(u);toast('Link copied');}}catch{toast('Link is in the address bar');}};
 function fromHash(){const m=location.hash.match(/l=([\w-]+)/);if(m)try{load(dec(m[1]));}catch(e){console.warn('bad layout link');}}fromHash();addEventListener('hashchange',fromHash);
-document.getElementById('sideHead').onclick=()=>{};
+const mob=()=>innerWidth<=760&&!(innerHeight<=500&&innerWidth>innerHeight);
+let panel=localStorage.getItem('panelState')||'expanded';
+function setPanel(st,save=true){panel=st;document.body.dataset.panel=st;if(save)localStorage.setItem('panelState',st);const t=document.getElementById('ptog');t.textContent=mob()?(st==='expanded'?'⌄':'⌃'):(st==='expanded'?'›':'‹');updTitle();}
+function updTitle(){document.getElementById('ptitle').textContent=sel?cat(sel.userData.itemId).name:'Furniture';}
+const ORD=['expanded','min','hidden'];
+document.getElementById('ptog').onclick=()=>setPanel(panel==='expanded'?'min':'expanded');
+document.getElementById('pclose').onclick=()=>setPanel('hidden');document.getElementById('pill').onclick=()=>setPanel('expanded');
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='p'&&!['INPUT','SELECT'].includes(e.target.tagName))setPanel(panel==='expanded'?'min':panel==='min'?'hidden':'expanded');});
+{const h=document.getElementById('handle');let y0=null;h.addEventListener('pointerdown',e=>{if(!mob())return;y0=e.clientY;});
+ h.addEventListener('pointerup',e=>{if(y0==null)return;const dy=e.clientY-y0;y0=null;if(Math.abs(dy)<30)return;const i=ORD.indexOf(panel);setPanel(ORD[Math.max(0,Math.min(2,i+(dy>0?1:-1)))]);});
+ h.addEventListener('pointercancel',()=>y0=null);}
+addEventListener('resize',()=>setPanel(panel,false));setPanel(panel,false);
+window.setPanel=setPanel;
 window.planner={items,addItem,ser,enc,dec,load,select,cam,goView,setLock,isAnimating:()=>!!anim,
  framed(){cam.updateMatrixWorld();let ok=true;for(const x of[B.x0,B.x1])for(const z of[B.z0,B.z1]){const v=new THREE.Vector3(x,0,z).project(cam);if(Math.abs(v.x)>1.001||Math.abs(v.y)>1.001)ok=false;}return ok;}};
 </script></body></html>
